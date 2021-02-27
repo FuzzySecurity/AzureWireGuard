@@ -17,7 +17,7 @@ Next generate an SSH keypair for the Azure VM. Note that when you let the user m
 ssh-keygen -t rsa -b 2048
 ```
 
-Open `wg.yml` and set fill in your public key and PSK on line 5 & 6.
+Open `wg.yml` and fill in your public key and PSK on line 5 & 6.
 
 ```yml
   vars:
@@ -33,7 +33,7 @@ You can deploy the ARM template as you wish but I have personally set up a `Temp
 
 You should change the `Deployment_Region_WG` to be whichever region you want your endpoint to be in (`japaneast` in my example) and paste your SSH public key in `Deployment_SSH_Public_key`. Then just complete the wizard.
 
-When they deployment has completed successfully, click out the `outputs` tab on the left, this will give you the public IP of the VM and the SSH user name.
+When they deployment has completed successfully, click on the `outputs` tab on the left, this will give you the public IP of the VM and the SSH user name.
 
 ![outputs](images/2.png)
 
@@ -92,12 +92,13 @@ b33f@DESKTOP-7RNOI72:~/wg$ curl https://ipinfo.io
   "postal": "151-0052",
   "timezone": "Asia/Tokyo",
   "readme": "https://ipinfo.io/missingauth"
+}
 ```
 
-WireGuard also has an app on Android (and I assume IOS). After you install the app you can import a profile using a QRCode, to generate that code you can simply do the following on your local host.
+WireGuard also has an app on Android (and I assume IOS). After you install the app you will be able to import a profile using a QR code, to generate that code you can simply do the following on your local host.
 
 ```
-qrencode -t ansiutf8 < Azure_JapanEast.conf
+qrencode -t ansiutf8 < client.conf
 ```
 
 ![qrcode](images/3.png)
