@@ -1,0 +1,79 @@
+---
+- name: WireGuard Deployment
+  hosts: all
+  vars:
+    userPublicKey:
+    userPSK:
+  become: true
+
+  tasks:
+  - name: Enable IP forwarding
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: '1'
+      reload: yes
+
+  - name: Updating APT & installing WireGuard
+    apt:
+      name: wireguard
+      state: latest
+      update_cache: yes
+
+  - name: Make WireGuard key material directory
+    file:
+      path: /etc/wireguard/serverKeyMat
+      state: directory
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Generate server key material
+    shell: "umask 077; wg genkey | tee /etc/wireguard/serverKeyMat/serverPrivate | wg pubkey > /etc/wireguard/serverKeyMat/serverPublic"
+
+  - name: Read server public IP
+    shell: curl ipinfo.io/ip
+    register: pub_ip
+
+  - name: Read server public key
+    shell: cat /etc/wireguard/serverKeyMat/serverPublic
+    register: pub_key
+
+  - name: Read server private key
+    shell: cat /etc/wireguard/serverKeyMat/serverPrivate
+    register: priv_key
+
+  - name: Get active network interface
+    shell: 'ip route | grep default | sed -e "s/^.*dev.//" -e "s/.proto.*//"'
+    register: net_interface
+
+  - name: Create WireGuard config
+    copy:
+      dest: /etc/wireguard/wg0.conf
+      content: |
+        [Interface]
+        PrivateKey = {{ priv_key.stdout }}
+        Address = 10.9.0.1/24
+        ListenPort = 51820
+        PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o {{ net_interface.stdout }} -j MASQUERADE; ip6tables -A FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -A POSTROUTING -o {{ net_interface.stdout }} -j MASQUERADE; iptables -t nat -A POSTROUTING -s 10.9.0.0/24 -o {{ net_interface.stdout }} -j MASQUERADE
+        PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o {{ net_interface.stdout }} -j MASQUERADE; ip6tables -D FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -D POSTROUTING -o {{ net_interface.stdout }} -j MASQUERADE; iptables -t nat -D POSTROUTING -s 10.9.0.0/24 -o {{ net_interface.stdout }} -j MASQUERADE
+        SaveConfig = true
+
+        [Peer]
+        PublicKey = {{ userPublicKey }}
+        PresharedKey = {{ userPSK }}
+        AllowedIPs = 10.9.0.2/32
+        PersistentKeepalive = 15
+
+  - name: Configure WireGuard service
+    service:
+      name: wg-quick@wg0
+      enabled: yes
+      state: restarted
+
+  - name: Server Public IP
+    debug:
+      msg: "Public Endpoint - {{ pub_ip.stdout }}"
+
+  - name: Server Public Key
+    debug:
+      msg: "Public Key - {{ pub_key.stdout }}"
