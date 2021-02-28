@@ -1,6 +1,12 @@
 # Private WireGuard VPN on Azure
 
-This is just a quick run-down on setting up a private WG vpn server on Azure in a semi-automated fashion. This is ideal for: short term needs (eg I'm travelling somewhere and need a private connection), I need to have public IP in X region for Y reason and long term use as well. The Azure ARM template will use a `Standard B1ms` host for the VM which is about `£12` a month so it is not overly pricey.
+This is just a quick run-down on setting up a private WG vpn server on Azure in a semi-automated fashion. This can be ideal for:
+
+  - Short term needs (eg I'm travelling somewhere and need a private connection)
+  - I need a public IP in X region for Y reason
+  - Long term use as well perhaps
+  
+The Azure ARM template will use a `Standard B1ms` host for the VM which is about `£12` a month so it is not overly pricey.
 
 ## Prepare
 
@@ -11,13 +17,13 @@ wg genkey | tee privatekey | wg pubkey > publickey
 wg genpsk > presharedkey
 ```
 
-Next generate an SSH keypair for the Azure VM. Note that when you let the user manually enter their public key as an Azure ARM parameter then it has to be in the `ssh-rsa` format.
+Next generate an SSH keypair for the Azure VM. Note that when you let a user manually enter their public key as an Azure ARM parameter in the UI then it has to be in the `ssh-rsa` format.
 
 ```
 ssh-keygen -t rsa -b 2048
 ```
 
-Open `wg.yml` and fill in your public key and PSK on line 5 & 6.
+Open `wg.yml` and fill in your WG public key and PSK on line 5 & 6.
 
 ```yml
   vars:
@@ -46,7 +52,7 @@ echo PUBLIC_IP > host.txt
 ansible-playbook -i host.txt -u wg --private-key=id_rsa wg.yml
 ```
 
-Right at the end, you will see that the playbook returns two debug messages which will give you the public ip and key of the server which you will need to fill in the client profile.
+Right at the end, you will see that the playbook returns two debug messages which will give you details you need to fill in the WG client profile.
 
 ```
 TASK [Server Public IP] *******************************************************ok: [20.xx.xx.xx] => {
@@ -78,7 +84,7 @@ Endpoint = <SERVER PUBLIC IP>:51820
 PersistentKeepalive = 15
 ```
 
-Then simply connect using your platform specific method. In my case after establishing the connection I expect to see a connection in Japan.
+Then simply configure WG using your platform specific method. In my case after establishing the connection I expect to see a connection in Japan.
 
 ```
 b33f@DESKTOP-7RNOI72:~/wg$ curl https://ipinfo.io
@@ -95,7 +101,7 @@ b33f@DESKTOP-7RNOI72:~/wg$ curl https://ipinfo.io
 }
 ```
 
-WireGuard also has an app on Android (and I assume IOS). After you install the app you will be able to import a profile using a QR code, to generate that code you can simply do the following on your local host.
+WireGuard also has an app on Android (and I assume IOS). After you install the app you will be able to import a profile using a QR code, to generate that code you can do the following on your local host.
 
 ```
 qrencode -t ansiutf8 < client.conf
